@@ -1,5 +1,10 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
+"""
+Created on 2017-08-28 
+
+@author: panda_zjd
+"""
 import numpy as np
 import pandas as pd
 from collections import defaultdict 
@@ -52,16 +57,16 @@ class Bagging(object):
     #简单有放回采样
     def RepetitionRandomSampling(self,data,number):     #有放回采样，number为抽样的个数
         sample=[]
-        for i in range(self.rate*number):
+        for i in range(int(self.rate*number)):
              sample.append(data[random.randint(0,len(data)-1)])
         return sample
     
-    def Metrics(self,predict_data):
-        #评价函数
+    def Metrics(self,predict_data,test):        #评价函数
+        score = predict_data
         recall=recall_score(test[:,-1], score, average=None)    #召回率
-        precision=precision_score(y_test, score, average=None)  #查准率
+        precision=precision_score(test[:,-1], score, average=None)  #查准率
         return recall,precision
-    
+    '''    
     def Bagging_clf(self,train,test,sample_type = "RepetitionRandomSampling"):
         print "self.Bagging single_basemodel"
         result = list()
@@ -77,20 +82,21 @@ class Bagging(object):
             print "选择的采样方法：",sample_type
             sample_function = self.IF_SubSample 
             print "采样率",(1.0-self.rate)
-            
+        print sample_function(train,len(train))
         for i in range(self.n_estimators):
             sample=sample_function(train,len(train))        #构建数据集
+            print sample
             result.append(self.TrainPredict(np.array(sample),np.array(test)))    #训练模型 返回每个模型的输出
-        
+        print result
         score = self.Voting(result) 
-        recall,precosoion = self.Metrics(score)
+        recall,precosoion = self.Metrics(score,test)
         return recall,precosoion                                         
-    
+    '''   
     def MutModel_clf(self,train,test,sample_type = "RepetitionRandomSampling"):
         print "self.Bagging Mul_basemodel"
         result = list()
         num_estimators =len(self.estimator)   #使用基础模型的数量
-        
+
         if sample_type == "RepetitionRandomSampling":
             print "选择的采样方法：",sample_type
             sample_function = self.RepetitionRandomSampling
@@ -106,12 +112,12 @@ class Bagging(object):
         for estimator in self.estimator:
             print estimator
             for i in range(int(self.n_estimators/num_estimators)):
-                sample=np.array(sample_function(train,len(train)) )       #构建数据集
+                sample=np.array(sample_function(train,len(train)))       #构建数据集
                 clf = estimator.fit(sample[:,0:-1],sample[:,-1])
                 result.append(clf.predict(test[:,0:-1]))      #训练模型 返回每个模型的输出
-                
+        
         score = self.Voting(result)
-        recall,precosoion = self.Metrics(score)
+        recall,precosoion = self.Metrics(score,test)
         return recall,precosoion    
 
 if __name__ == "__main__":
@@ -119,7 +125,7 @@ if __name__ == "__main__":
     from sklearn.ensemble import BaggingClassifier
     from sklearn.ensemble import AdaBoostClassifier
     
-    datafile = "../data/Yeast.data"
+    datafile = "../data/waveform.data"
     data = pd.read_csv(datafile)
     data_x = data.iloc[:,0:-1]
     data_y = data.iloc[:,-1]
@@ -129,16 +135,18 @@ if __name__ == "__main__":
     test = np.column_stack([x_test, y_test])
     
     clf = [tree.DecisionTreeClassifier(),AdaBoostClassifier(),tree.DecisionTreeClassifier(max_depth=4)]     #基础模型
+    #clf = [tree.DecisionTreeClassifier()]
     clf_self = Bagging(n_estimators = 200, estimator = clf,rate =1.0)
     if(len(clf_self.estimator) == 1):
-        recall_self,precision_self = clf_self.Bagging_clf(train,test)   #单基础模型
+        recall_self,precision_self = clf_self.MutModel_clf(train,test)   #单基础模型
     elif(len(clf_self.estimator)>1):
         recall_self,precision_self = clf_self.MutModel_clf(train,test)   #多基础模型
     else:
         print "请输出基础模型"
+
     print "recall:",'\n',recall_self
     print "precision",'\n',precision_self 
-     
+    
     #sklearn中 BaggingClassifier
     clf_sklearn = BaggingClassifier(base_estimator = tree.DecisionTreeClassifier(),n_estimators=200)
     clf_sklearn.fit(x_train, y_train)
@@ -150,3 +158,7 @@ if __name__ == "__main__":
     print "recall:",'\n',recall
     print "precision",'\n',precision
     
+    print "*******"*10
+    print 
+    print recall_self-recall
+    print precision_self-precision
