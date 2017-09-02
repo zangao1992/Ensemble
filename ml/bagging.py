@@ -6,6 +6,7 @@ from collections import defaultdict
 import random
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_score, recall_score
+from sklearn.ensemble import IsolationForest
 
 class Bagging(object):
     
@@ -26,15 +27,28 @@ class Bagging(object):
         
         result= map(Vote,term)      #获取结果
         return result
-        
-    def SubSample(self,n,data):
-        pass
+
+    #随机欠采样函数
+    def UnderSampling(data,rate=1):
+        #np.random.seed(np.random.randint(0,1000))
+        data=np.array(data)
+        np.random.shuffle(data)    #打乱data          
+        newdata = data[0:int(data.shape[0]*rate),:]   #切片，取总数*rata的个数，删去（1-rate）%的样本
+        return newdata   
     
+    #isolationforest 欠采样
+    def SubSample(self,data,num,rate = 1.0):
+        clf_IF = IsolationForest(n_estimators=200,contamination=(1.0-rate))
+        clf_IF.fit(data)
+        pred =clf_IF.predict(data)
+        score = clf_IF.decision_function(data)
+
     def TrainPredict(self,train,test):          #训练基础模型，并返回模型预测结果
         clf = self.estimator.fit(train[:,0:-1],train[:,-1])
         result = clf.predict(test[:,0:-1])
         return result
     
+    #简单有放回采样
     def RepetitionRandomSampling(self,data,number):     #有放回采样，number为抽样的个数
         sample=[]
         for i in range(number):
@@ -47,7 +61,7 @@ class Bagging(object):
         precision=precision_score(y_test, score, average=None)  #查准率
         return recall,precision
     
-    def Bagging_clf(self,train,test):
+    def Bagging_clf(self,train,test,rate = 1.0):
         print "self.Bagging single_basemodel"
         result = list()
         for i in range(self.n_estimators):
@@ -57,7 +71,7 @@ class Bagging(object):
         recall,precosoion = self.Metrics(score)
         return recall,precosoion                                         
     
-    def MutModel_clf(self,train,test):
+    def MutModel_clf(self,train,test,rate = 1.0):
         print "self.Bagging Mul_basemodel"
         result = list()
         num_estimators =len(self.estimator)
@@ -85,7 +99,7 @@ if __name__ == "__main__":
     train = np.column_stack([x_train, y_train])
     test = np.column_stack([x_test, y_test])
     
-    clf = [tree.DecisionTreeClassifier(),AdaBoostClassifier()]     #基础模型
+    clf = [tree.DecisionTreeClassifier(),AdaBoostClassifier(),tree.DecisionTreeClassifier(max_depth=4)]     #基础模型
     clf_self = Bagging(n_estimators = 200, estimator = clf)
     if(len(clf_self.estimator) == 1):
         recall_self,precision_self = clf_self.Bagging_clf(train,test)   #单基础模型
