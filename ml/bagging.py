@@ -134,15 +134,14 @@ if __name__ == "__main__":
     train = np.column_stack([x_train, y_train])
     test = np.column_stack([x_test, y_test])
     
-    clf = [tree.DecisionTreeClassifier(),AdaBoostClassifier(),tree.DecisionTreeClassifier(max_depth=4)]     #基础模型
+    clf = [tree.DecisionTreeClassifier(),AdaBoostClassifier(),tree.DecisionTreeClassifier(max_depth=4)]    #基础模型
     #clf = [tree.DecisionTreeClassifier()]
-    clf_self = Bagging(n_estimators = 200, estimator = clf,rate =1.0)
+    clf_self = Bagging(n_estimators = 100, estimator = clf,rate =1.0)
+    num = len(clf_self.estimator) 
     if(len(clf_self.estimator) == 1):
-        print "bagging只有一个基础模型"
-        #recall_self,precision_self = clf_self.MutModel_clf(train,test)   #单基础模型
+        print "bagging有一个基础模型"
     elif(len(clf_self.estimator)>1):
-        print "bagging有多个基础模型"
-       # recall_self,precision_self = clf_self.MutModel_clf(train,test)   #多基础模型
+        print "bagging有{}个基础模型".format(num)
     else:
         print "请输出基础模型"
     recall_self,precision_self = clf_self.MutModel_clf(train,test)
@@ -150,7 +149,7 @@ if __name__ == "__main__":
     print "precision",'\n',precision_self 
     
     #sklearn中 BaggingClassifier
-    clf_sklearn = BaggingClassifier(base_estimator = tree.DecisionTreeClassifier(),n_estimators=200)
+    clf_sklearn = BaggingClassifier(base_estimator = tree.DecisionTreeClassifier(),n_estimators = 100)
     clf_sklearn.fit(x_train, y_train)
     score = clf_sklearn.predict(x_test)
     recall=recall_score(y_test, score, average=None) 
