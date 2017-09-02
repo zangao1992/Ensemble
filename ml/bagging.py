@@ -1,10 +1,13 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 import numpy as np
+import pandas as pd
 from collections import defaultdict 
 import random
-from sklearn.ensemble import AdaBoostClassifier
-#from sklearn.model_selection import train_test_split
+#from sklearn.ensemble import AdaBoostClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import precision_score, recall_score
+
 
 class Bagging(object):
     
@@ -45,37 +48,45 @@ class Bagging(object):
     def Bagging_clf(self,train,test):
         result = list()
         for i in range(self.n_estimators):
-            print i
-            sample=self.RepetitionRandomSampling(data,len(data))        #构建数据集
+            #print i
+            sample=self.RepetitionRandomSampling(train,len(train))        #构建数据集
             #print sample
-            
-            result.append(self.TrainPredict(np.array(train),np.array(test)))    #训练模型 返回每个模型的输出
+            result.append(self.TrainPredict(np.array(sample),np.array(test)))    #训练模型 返回每个模型的输出
             #print result
         score = self.Voting(result) 
-        print score
+        recall=recall_score(test[:,-1], score, average=None) 
+        print "自己的Bagging"
+        return recall
+        #print recall
     
 
 
 if __name__ == "__main__":
-    from sklearn.datasets import load_iris
-    iris = load_iris()
-    data = iris.data
-    target = iris.target
-    term = np.column_stack([data,target])
-#    term1 = [1,2,3,4,2,3,1,2,3,2,2,2,2,2,1]
-#    term2 =[3,1,2,4,2,3,1,2,3,1,1,2,2,2,2]
-#    term3 =[3,1,2,4,2,3,1,2,3,1,1,2,2,2,1]
-#    term4 =[2,1,2,4,2,3,3,1,2,2,1,3,2,1,2]
-#    term5 =[2,1,2,1,2,3,2,2,3,1,1,2,2,3,3]
-#    
-#    term = np.array([term1,term2,term3,term4,term5])
-    clf = AdaBoostClassifier(n_estimators= 10,learning_rate=0.01)
-   
-    qq = Bagging(n_estimators = 10,estimator = clf)
-   # print qq.TrainPredict(term)
-    train = term[0:int(0.9*len(term)),:]
-    test = term[int(0.9*len(term)):,:]
-    score = qq.Bagging_clf(train,test)
+    from sklearn import tree
+    from sklearn.ensemble import BaggingClassifier
+    datafile = "../data/Yeast.data"
+    data =pd.read_csv(datafile)
+    data_x = data.iloc[:,0:-1]
+    data_y = data.iloc[:,-1]
+    
+
+    x_train, x_test, y_train, y_test = train_test_split(data_x,data_y,test_size=0.33,random_state=120)
+    train = np.column_stack([x_train, y_train])
+    test = np.column_stack([x_test, y_test])
+    
+    clf = tree.DecisionTreeClassifier()
+    clf_self = Bagging(n_estimators = 200,estimator = clf)
+    recall_self = clf_self.Bagging_clf(train,test)
+    #print "自己的Bagging"
+    print recall_self 
+    
+    
+    clfba = BaggingClassifier(base_estimator=clf,n_estimators=200)
+    clfba.fit(x_train, y_train)
+    re = clfba.predict(x_test)
+    recall=recall_score(y_test, re, average=None) 
+    print "库函数bagging结果"
+    print recall
     
     #mm= qq.RepetitionRandomSampling([11,11,22],910)
 
