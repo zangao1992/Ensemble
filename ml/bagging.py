@@ -138,12 +138,14 @@ if __name__ == "__main__":
     #clf = [tree.DecisionTreeClassifier()]
     clf_self = Bagging(n_estimators = 200, estimator = clf,rate =1.0)
     if(len(clf_self.estimator) == 1):
-        recall_self,precision_self = clf_self.MutModel_clf(train,test)   #单基础模型
+        print "bagging只有一个基础模型"
+        #recall_self,precision_self = clf_self.MutModel_clf(train,test)   #单基础模型
     elif(len(clf_self.estimator)>1):
-        recall_self,precision_self = clf_self.MutModel_clf(train,test)   #多基础模型
+        print "bagging有多个基础模型"
+       # recall_self,precision_self = clf_self.MutModel_clf(train,test)   #多基础模型
     else:
         print "请输出基础模型"
-
+    recall_self,precision_self = clf_self.MutModel_clf(train,test)
     print "recall:",'\n',recall_self
     print "precision",'\n',precision_self 
     
