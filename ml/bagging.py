@@ -10,9 +10,10 @@ from sklearn.ensemble import IsolationForest
 
 class Bagging(object):
     
-    def __init__(self,n_estimators,estimator):
+    def __init__(self,n_estimators,estimator,rate=1.0):
         self.estimator = estimator
         self.n_estimators = n_estimators
+        self.rate = rate
 
     def Voting(self,data):          #投票法
         term = np.transpose(data)   #转置
@@ -29,16 +30,16 @@ class Bagging(object):
         return result
 
     #随机欠采样函数
-    def UnderSampling(data,rate=1):
+    def UnderSampling(self,data):
         #np.random.seed(np.random.randint(0,1000))
         data=np.array(data)
         np.random.shuffle(data)    #打乱data          
-        newdata = data[0:int(data.shape[0]*rate),:]   #切片，取总数*rata的个数，删去（1-rate）%的样本
+        newdata = data[0:int(data.shape[0]*self.rate),:]   #切片，取总数*rata的个数，删去（1-rate）%的样本
         return newdata   
     
     #isolationforest 欠采样
-    def SubSample(self,data,num,rate = 1.0):
-        clf_IF = IsolationForest(n_estimators=200,contamination=(1.0-rate))
+    def IF_SubSample(self,data,num):
+        clf_IF = IsolationForest(n_estimators=200,contamination=(1.0-self.rate))
         clf_IF.fit(data)
         pred =clf_IF.predict(data)
         score = clf_IF.decision_function(data)
@@ -51,7 +52,7 @@ class Bagging(object):
     #简单有放回采样
     def RepetitionRandomSampling(self,data,number):     #有放回采样，number为抽样的个数
         sample=[]
-        for i in range(number):
+        for i in range(self.rate*number):
              sample.append(data[random.randint(0,len(data)-1)])
         return sample
     
@@ -61,26 +62,54 @@ class Bagging(object):
         precision=precision_score(y_test, score, average=None)  #查准率
         return recall,precision
     
-    def Bagging_clf(self,train,test,rate = 1.0):
+    def Bagging_clf(self,train,test,sample_type = "RepetitionRandomSampling"):
         print "self.Bagging single_basemodel"
         result = list()
+        
+        if sample_type == "RepetitionRandomSampling":
+            print "选择的采样方法：",sample_type
+            sample_function = self.RepetitionRandomSampling
+        elif sample_type == "UnderSampling":
+            print "选择的采样方法：",sample_type
+            sample_function = self.UnderSampling 
+            print "采样率",self.rate
+        elif sample_type == "IF_SubSample":
+            print "选择的采样方法：",sample_type
+            sample_function = self.IF_SubSample 
+            print "采样率",(1.0-self.rate)
+            
         for i in range(self.n_estimators):
-            sample=self.RepetitionRandomSampling(train,len(train))        #构建数据集
+            sample=sample_function(train,len(train))        #构建数据集
             result.append(self.TrainPredict(np.array(sample),np.array(test)))    #训练模型 返回每个模型的输出
+        
         score = self.Voting(result) 
         recall,precosoion = self.Metrics(score)
         return recall,precosoion                                         
     
-    def MutModel_clf(self,train,test,rate = 1.0):
+    def MutModel_clf(self,train,test,sample_type = "RepetitionRandomSampling"):
         print "self.Bagging Mul_basemodel"
         result = list()
-        num_estimators =len(self.estimator)
+        num_estimators =len(self.estimator)   #使用基础模型的数量
+        
+        if sample_type == "RepetitionRandomSampling":
+            print "选择的采样方法：",sample_type
+            sample_function = self.RepetitionRandomSampling
+        elif sample_type == "UnderSampling":
+            print "选择的采样方法：",sample_type
+            sample_function = self.UnderSampling 
+            print "采样率",self.rate
+        elif sample_type == "IF_SubSample":
+            print "选择的采样方法：",sample_type
+            sample_function = self.IF_SubSample 
+            print "采样率",(1.0-self.rate)
+            
         for estimator in self.estimator:
             print estimator
             for i in range(int(self.n_estimators/num_estimators)):
-                sample=np.array(self.RepetitionRandomSampling(train,len(train)) )       #构建数据集
+                sample=np.array(sample_function(train,len(train)) )       #构建数据集
                 clf = estimator.fit(sample[:,0:-1],sample[:,-1])
                 result.append(clf.predict(test[:,0:-1]))      #训练模型 返回每个模型的输出
+                
         score = self.Voting(result)
         recall,precosoion = self.Metrics(score)
         return recall,precosoion    
@@ -100,7 +129,7 @@ if __name__ == "__main__":
     test = np.column_stack([x_test, y_test])
     
     clf = [tree.DecisionTreeClassifier(),AdaBoostClassifier(),tree.DecisionTreeClassifier(max_depth=4)]     #基础模型
-    clf_self = Bagging(n_estimators = 200, estimator = clf)
+    clf_self = Bagging(n_estimators = 200, estimator = clf,rate =1.0)
     if(len(clf_self.estimator) == 1):
         recall_self,precision_self = clf_self.Bagging_clf(train,test)   #单基础模型
     elif(len(clf_self.estimator)>1):
@@ -111,7 +140,7 @@ if __name__ == "__main__":
     print "precision",'\n',precision_self 
      
     #sklearn中 BaggingClassifier
-    clf_sklearn = BaggingClassifier(base_estimator = tree.DecisionTreeClassifier() , n_estimators=200)
+    clf_sklearn = BaggingClassifier(base_estimator = tree.DecisionTreeClassifier(),n_estimators=200)
     clf_sklearn.fit(x_train, y_train)
     score = clf_sklearn.predict(x_test)
     recall=recall_score(y_test, score, average=None) 
