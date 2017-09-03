@@ -66,7 +66,8 @@ class Bagging(object):
         recall=recall_score(test[:,-1], score, average=None)    #召回率
         precision=precision_score(test[:,-1], score, average=None)  #查准率
         return recall,precision
-    '''    
+
+     #  单basemodel的入口，已合并入多basemodel
     def Bagging_clf(self,train,test,sample_type = "RepetitionRandomSampling"):
         print "self.Bagging single_basemodel"
         result = list()
@@ -91,7 +92,7 @@ class Bagging(object):
         score = self.Voting(result) 
         recall,precosoion = self.Metrics(score,test)
         return recall,precosoion                                         
-    '''   
+       
     def MutModel_clf(self,train,test,sample_type = "RepetitionRandomSampling"):
         print "self.Bagging Mul_basemodel"
         result = list()
